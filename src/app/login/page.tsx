@@ -65,6 +65,9 @@ export default function LoginPage() {
       >
         {buttonDisabled ? "No access" : "Login"}
       </button>
+      <Link href="/forgotpassword" className="text-blue-600 hover:underline">
+        Forgot Password?
+      </Link>
       <Link href="/signup">Visit signup page</Link>
     </div>
   );

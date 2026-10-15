@@ -2,7 +2,12 @@ import nodemailer from "nodemailer";
 import User from "@/models/userModel";
 import bcryptjs from "bcryptjs";
 
-export const sendEmail = async ({ email, emailType, userId }: any) => {
+export const sendEmail = async ({
+  email,
+  emailType,
+  userId,
+  resetToken,
+}: any) => {
   try {
     //create hashed token
     const hashedToken = await bcryptjs.hash(userId.toString(), 10);
@@ -13,7 +18,7 @@ export const sendEmail = async ({ email, emailType, userId }: any) => {
       });
     } else if (emailType === "RESET") {
       await User.findByIdAndUpdate(userId, {
-        forgotPasswordToken: hashedToken,
+        forgotPasswordToken: await bcryptjs.hash(resetToken, 10),
         forgotPasswordTokenExpiry: Date.now() + 3600000,
       });
     }
@@ -26,7 +31,10 @@ export const sendEmail = async ({ email, emailType, userId }: any) => {
         pass: process.env.SMTP_PASS,
       },
     });
-
+    const link =
+      emailType === "VERIFY"
+        ? `${process.env.DOMAIN}/verifyemail?token=${hashedToken}`
+        : `${process.env.DOMAIN}/resetpassword?token=${resetToken}`;
     const mailOptions = {
       from: {
         name: "My App",
@@ -35,12 +43,16 @@ export const sendEmail = async ({ email, emailType, userId }: any) => {
       to: email,
       subject:
         emailType === "VERIFY" ? "verify your email" : "Reset your password",
-      html: `<p>Click <a href="${process.env.DOMAIN}
-      /verifyemail?token=${hashedToken}">here</a> to 
-      ${emailType === "VERIFY" ? "verify your email" : "reset your password"}
-      or copy and paste the link below in your browser. <br> ${process.env.DOMAIN}
-      /verifyemail?token=${hashedToken}
-            </p>`,
+      html: `
+    <p>
+      Click <a href="${link}">here</a> to
+      ${emailType === "VERIFY" ? "verify your email" : "reset your password"}.
+      <br />
+      Or copy and paste the link below into your browser:
+      <br />
+      <a href="${link}">${link}</a>
+    </p>
+  `,
     };
     const mailRespose = await transporter.sendMail(mailOptions);
     return mailRespose;
